@@ -11,7 +11,7 @@ import (
 var total_tickets int32 = 20
 var mutex = &sync.Mutex{}
 
-func sell_tickets(i int) {
+func sell_tickets(i int, done chan bool) {
 	for {
 		if total_tickets > 0 { // 如果有票就卖
 			mutex.Lock()
@@ -22,24 +22,23 @@ func sell_tickets(i int) {
 			}
 			mutex.Unlock()
 		} else {
+			done <- true
 			break
 		}
 	}
 }
 
-func input_wait() {
-	var input string
-	fmt.Scanln(&input)
-}
-
 func main() {
+	done := make(chan bool)
 	n := 8
 	runtime.GOMAXPROCS(n)        // 我的电脑是 8 核处理器，所以我设置了 8
 	rand.Seed(time.Now().Unix()) // 生成随机种子
 	for i := 0; i < n; i++ {     // 并发 8 个 goroutine 来卖票
-		go sell_tickets(i)
+		go sell_tickets(i, done)
 	}
-	// 等待线程执行完
-	input_wait()
+
+	for i := 0; i < n; i++ {
+		<-done
+	}
 	fmt.Println(total_tickets, "done") // 退出时打印还有多少票
 }
